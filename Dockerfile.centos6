@@ -1,0 +1,57 @@
+FROM centos:6
+MAINTAINER Johan Pauwels <http://www.eecs.qmul.ac.uk/people/view/50775/johan-pauwels>
+RUN yum --enablerepo=extras install -y epel-release \
+&&  rpm -Uvh http://li.nux.ro/download/nux/dextop/el6/x86_64/nux-dextop-release-0-2.el6.nux.noarch.rpm \
+&&  yum install -y yum-utils \
+&&  yum-config-manager --add-repo https://people.centos.org/tru/devtools-2/devtools-2.repo \
+&&  yum-config-manager --add-repo http://pkgrepo.linuxtech.net/el6/release/linuxtech.repo
+RUN yum update -y && yum install -y \
+    alsa-lib-devel \
+    bzip2-devel \
+    devtoolset-2-toolchain \
+    fftw-devel \
+    jack-audio-connection-kit-devel \
+    libfishsound-devel \
+    libid3tag-devel \
+    liblo-devel \
+    liblrdf-devel \
+    libmad-devel \
+    liboggz-devel \
+    libsamplerate-devel \
+    libsndfile-devel \
+    libsord-devel \
+    portaudio-devel \
+    pulseaudio-libs-devel \
+    qt5-qtbase-devel \
+    raptor2-utils \
+&&  yum clean all
+
+# Compile sonic-annotator
+ADD https://code.soundsoftware.ac.uk/attachments/download/1616/sonic-annotator-1.2.tar.gz .
+RUN tar xzf sonic-annotator-1.2.tar.gz && rm -f sonic-annotator-1.2.tar.gz
+WORKDIR sonic-annotator-1.2
+### Compile Vamp SDK
+WORKDIR vamp-plugin-sdk
+RUN source /opt/rh/devtoolset-2/enable && ./configure && make install && make clean
+WORKDIR ..
+### Compile Vamp test plugin (prerequisite for sonic-annotator tests)
+ADD https://code.soundsoftware.ac.uk/attachments/download/1583/vamp-test-plugin-1.1.tar.gz .
+RUN tar xzf vamp-test-plugin-1.1.tar.gz && rm -f vamp-test-plugin-1.1.tar.gz
+WORKDIR vamp-test-plugin-1.1
+RUN source /opt/rh/devtoolset-2/enable && make -f Makefile.linux && mv vamp-test-plugin.* /usr/local/lib/vamp/ && make -f Makefile.linux clean
+WORKDIR ..
+RUN rm -rf vamp-test-plugin-1.1
+### Compile sonic-annotator itself
+RUN sed -i 's/case SERD_ERR_ID_CLASH/\/\//g' dataquay/src/backend/BasicStoreSord.cpp \
+&&  sed -i 's/case SERD_ERR_BAD_CURIE/\/\//g' dataquay/src/backend/BasicStoreSord.cpp \
+&&  sed -i 's/case SERD_ERR_INTERNAL/\/\//g' dataquay/src/backend/BasicStoreSord.cpp
+RUN source /opt/rh/devtoolset-2/enable && PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH ./configure && (make || true) && make clean
+WORKDIR ..
+
+# Compile VamPy
+RUN yum install -y python-devel numpy && yum clean all
+ADD http://code.soundsoftware.ac.uk/attachments/download/672/vampy-2.0.tar.bz2 .
+RUN tar xjf vampy-2.0.tar.bz2 && rm -f vampy-2.0.tar.bz2
+WORKDIR vampy-2.0
+RUN source /opt/rh/devtoolset-2/enable && make -f Makefile.linux && make -f Makefile.linux install && make -f Makefile.linux clean
+WORKDIR ..

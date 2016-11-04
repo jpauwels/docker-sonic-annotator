@@ -32,9 +32,9 @@ WORKDIR ..
 RUN rm -rf libfishsound-1.0.0
 
 # Compile sonic-annotator
-ADD https://code.soundsoftware.ac.uk/attachments/download/1616/sonic-annotator-1.2.tar.gz .
-RUN tar xzf sonic-annotator-1.2.tar.gz && rm -f sonic-annotator-1.2.tar.gz
-WORKDIR sonic-annotator-1.2
+ADD https://code.soundsoftware.ac.uk/attachments/download/1700/sonic-annotator-1.3.tar.gz .
+RUN tar xzf sonic-annotator-1.3.tar.gz && rm -f sonic-annotator-1.3.tar.gz
+WORKDIR sonic-annotator-1.3
 ### Compile Vamp SDK
 WORKDIR vamp-plugin-sdk
 RUN ./configure && make install && make clean
